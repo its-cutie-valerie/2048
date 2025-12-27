@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Time Rush 2048 - Race against time!">
+    <title>Time Rush 2048</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Menu Screen -->
+    <div class="menu-screen" id="menuScreen">
+        <h1 class="menu-title">TIME RUSH</h1>
+        <p class="menu-subtitle">Race against time in this 2048 variant</p>
+        <div class="difficulty-selector">
+            <button class="difficulty-btn easy" onclick="startGame('easy')">
+                🌱 Easy Mode
+                <span class="difficulty-desc">60s start • +50% time bonus • Fewer bad events</span>
+            </button>
+            <button class="difficulty-btn normal" onclick="startGame('normal')">
+                ⚡ Normal Mode
+                <span class="difficulty-desc">45s start • Standard bonuses • Balanced events</span>
+            </button>
+            <button class="difficulty-btn hard" onclick="startGame('hard')">
+                🔥 Hard Mode
+                <span class="difficulty-desc">30s start • -50% time bonus • More bad events</span>
+            </button>
+        </div>
+        <div class="high-scores" id="highScores">
+            <h3>🏆 High Scores</h3>
+            <div class="high-score-item"><span>Easy:</span><span id="highScoreEasy">0</span></div>
+            <div class="high-score-item"><span>Normal:</span><span id="highScoreNormal">0</span></div>
+            <div class="high-score-item"><span>Hard:</span><span id="highScoreHard">0</span></div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div class="game-container" id="gameContainer">
+        <div class="game-header">
+            <div class="logo">2048</div>
+            <div class="header-stats">
+                <div class="stat-box">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Best</div>
+                    <div class="stat-value" id="best">0</div>
+                </div>
+                <span class="difficulty-badge" id="difficultyBadge">Normal</span>
+            </div>
+        </div>
+        <div class="timer-container">
+            <div class="timer-bar-wrapper">
+                <div class="timer-bar" id="timerBar"></div>
+            </div>
+            <div class="timer-display">
+                <span class="timer-seconds" id="timerSeconds">45</span>
+                <span class="timer-ms" id="timerMs">.000</span>
+            </div>
+        </div>
+        <div class="grid-container" id="gridContainer">
+            <div class="grid" id="grid">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="tile-container" id="tileContainer"></div>
+        </div>
+        <div class="controls">
+            <button class="btn btn-secondary" onclick="restartGame()">🔄 Restart</button>
+            <button class="btn btn-secondary" onclick="backToMenu()">📋 Menu</button>
+        </div>
+        <p class="instructions">Use arrow keys or swipe to move tiles</p>
+    </div>
+
+    <div class="event-toast" id="eventToast"></div>
+
+    <div class="game-over-overlay" id="gameOver">
+        <h1 class="game-over-title">TIME'S UP!</h1>
+        <div class="game-over-stats">
+            <div class="final-score-label">Final Score</div>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="new-high-score" id="newHighScore" style="display: none;">🎉 New High Score!</div>
+        </div>
+        <div class="game-over-buttons">
+            <button class="btn btn-primary" onclick="restartGame()">🔄 Play Again</button>
+            <button class="btn btn-secondary" onclick="backToMenu()">📋 Menu</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
