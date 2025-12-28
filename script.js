@@ -1,13 +1,301 @@
+// ===== Sound System =====
+const SoundManager = {
+    audioContext: null,
+    enabled: true,
+    volume: 0.5,
+
+    init() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.warn('Web Audio API not supported');
+            this.enabled = false;
+        }
+    },
+
+    resume() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    },
+
+    // Generate a simple tone
+    playTone(frequency, duration, type = 'square', volumeMod = 1) {
+        if (!this.enabled || !this.audioContext) return;
+        this.resume();
+
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+        gain.gain.setValueAtTime(this.volume * volumeMod, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+
+        osc.start();
+        osc.stop(this.audioContext.currentTime + duration);
+    },
+
+    // Slide sound - quick whoosh
+    slide() {
+        if (!this.enabled) return;
+        this.playTone(200, 0.08, 'sine', 0.3);
+        setTimeout(() => this.playTone(150, 0.05, 'sine', 0.2), 30);
+    },
+
+    // Merge sound - satisfying pop with pitch based on tile value
+    merge(value) {
+        if (!this.enabled) return;
+        const basePitch = 220 + Math.min(value, 2048) / 4;
+        this.playTone(basePitch, 0.1, 'square', 0.4);
+        setTimeout(() => this.playTone(basePitch * 1.5, 0.15, 'square', 0.3), 50);
+    },
+
+    // Big merge - epic fanfare for 128+
+    bigMerge(value) {
+        if (!this.enabled) return;
+        const basePitch = 330 + Math.min(value, 2048) / 3;
+        this.playTone(basePitch, 0.1, 'square', 0.5);
+        setTimeout(() => this.playTone(basePitch * 1.25, 0.1, 'square', 0.4), 80);
+        setTimeout(() => this.playTone(basePitch * 1.5, 0.2, 'sawtooth', 0.5), 160);
+    },
+
+    // Time bonus - ascending arpeggio
+    timeBonus() {
+        if (!this.enabled) return;
+        this.playTone(523, 0.08, 'square', 0.3);
+        setTimeout(() => this.playTone(659, 0.08, 'square', 0.3), 60);
+        setTimeout(() => this.playTone(784, 0.12, 'square', 0.4), 120);
+    },
+
+    // Time penalty - descending sad
+    timePenalty() {
+        if (!this.enabled) return;
+        this.playTone(300, 0.1, 'sawtooth', 0.3);
+        setTimeout(() => this.playTone(200, 0.15, 'sawtooth', 0.2), 100);
+    },
+
+    // Freeze - icy crystalline sound
+    freeze() {
+        if (!this.enabled) return;
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                this.playTone(800 + Math.random() * 400, 0.1, 'sine', 0.2);
+            }, i * 50);
+        }
+    },
+
+    // Good event - cheerful jingle
+    goodEvent() {
+        if (!this.enabled) return;
+        this.playTone(523, 0.1, 'square', 0.3);
+        setTimeout(() => this.playTone(659, 0.1, 'square', 0.3), 100);
+        setTimeout(() => this.playTone(784, 0.1, 'square', 0.3), 200);
+        setTimeout(() => this.playTone(1047, 0.2, 'square', 0.4), 300);
+    },
+
+    // Bad event - ominous
+    badEvent() {
+        if (!this.enabled) return;
+        this.playTone(150, 0.2, 'sawtooth', 0.4);
+        setTimeout(() => this.playTone(100, 0.3, 'sawtooth', 0.3), 150);
+    },
+
+    // Game over - dramatic descend
+    gameOver() {
+        if (!this.enabled) return;
+        this.playTone(440, 0.2, 'sawtooth', 0.5);
+        setTimeout(() => this.playTone(349, 0.2, 'sawtooth', 0.4), 200);
+        setTimeout(() => this.playTone(294, 0.2, 'sawtooth', 0.3), 400);
+        setTimeout(() => this.playTone(196, 0.4, 'sawtooth', 0.4), 600);
+    },
+
+    // Button click
+    click() {
+        if (!this.enabled) return;
+        this.playTone(600, 0.05, 'square', 0.2);
+    },
+
+    // Victory fanfare (for 2048)
+    victory() {
+        if (!this.enabled) return;
+        const notes = [523, 523, 523, 698, 880, 784, 698, 880];
+        notes.forEach((note, i) => {
+            setTimeout(() => this.playTone(note, 0.15, 'square', 0.4), i * 120);
+        });
+    },
+
+    // Combo sound
+    combo(multiplier) {
+        if (!this.enabled) return;
+        const basePitch = 400 + multiplier * 100;
+        this.playTone(basePitch, 0.08, 'square', 0.3);
+        this.playTone(basePitch * 1.5, 0.08, 'square', 0.3);
+    },
+
+    // Rewind sound - VHS tape rewind effect
+    rewind() {
+        if (!this.enabled) return;
+        for (let i = 0; i < 8; i++) {
+            setTimeout(() => {
+                this.playTone(600 - i * 50, 0.06, 'sawtooth', 0.3);
+            }, i * 50);
+        }
+    }
+};
+
+// ===== Background Music System =====
+const MusicManager = {
+    audioContext: null,
+    isPlaying: false,
+    isMuted: false, // Start unmuted by default
+    volume: 0.15,
+    intervalId: null,
+    currentBeat: 0,
+
+    // Simple retro melody pattern (note frequencies)
+    melody: [262, 294, 330, 262, 330, 392, 330, 294, 262, 294, 330, 392, 440, 392, 330, 294],
+    bass: [131, 131, 165, 165, 131, 131, 196, 165],
+
+    init() {
+        if (!this.audioContext) {
+            this.audioContext = SoundManager.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+
+    resume() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(e => console.error("Audio resume failed", e));
+        }
+    },
+
+    playNote(freq, duration, type, vol) {
+        if (this.isMuted) return;
+
+        // Ensure context matches SoundManager
+        if (!this.audioContext && SoundManager.audioContext) {
+            this.audioContext = SoundManager.audioContext;
+        }
+
+        if (!this.audioContext) return;
+
+        // Try to resume if suspended (but don't block)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => { });
+        }
+
+        try {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+
+            osc.type = type;
+            osc.frequency.value = freq;
+
+            const now = this.audioContext.currentTime;
+            gain.gain.setValueAtTime(vol * this.volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        } catch (e) {
+            // Audio context error or blocked
+        }
+    },
+
+    tick() {
+        // Play melody note
+        const melodyNote = this.melody[this.currentBeat % this.melody.length];
+        this.playNote(melodyNote, 0.2, 'square', 0.4);
+
+        // Play bass note (every 2 beats)
+        if (this.currentBeat % 2 === 0) {
+            const bassNote = this.bass[(this.currentBeat / 2) % this.bass.length];
+            this.playNote(bassNote, 0.3, 'triangle', 0.6);
+        }
+
+        this.currentBeat++;
+    },
+
+    start() {
+        if (this.isPlaying) return;
+        this.init();
+        this.isPlaying = true;
+        this.currentBeat = 0;
+        // 180 BPM = 333ms per beat
+        this.intervalId = setInterval(() => this.tick(), 180);
+    },
+
+    stop() {
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+        this.isPlaying = false;
+    },
+
+    toggle() {
+        this.isMuted = !this.isMuted;
+        return !this.isMuted;
+    }
+};
+
+// Initialize sound on first user interaction
+document.addEventListener('click', () => SoundManager.init(), { once: true });
+document.addEventListener('keydown', () => SoundManager.init(), { once: true });
+
 // ===== Game Configuration =====
 const DIFFICULTIES = {
-    easy: { startTime: 60000, maxTime: 90000, timeMultiplier: 1.5, badEventChance: 0.08, goodEventChance: 0.15, label: 'Baby Mode' },
-    normal: { startTime: 45000, maxTime: 75000, timeMultiplier: 1.0, badEventChance: 0.12, goodEventChance: 0.12, label: 'Marine' },
-    hard: { startTime: 30000, maxTime: 60000, timeMultiplier: 0.5, badEventChance: 0.18, goodEventChance: 0.08, label: 'Nightmare' }
+    easy: { startTime: 60000, maxTime: 90000, timeMultiplier: 1.5, badEventChance: 0.08, goodEventChance: 0.15, label: 'Baby Mode', rewindRechargeTime: 20000 },
+    normal: { startTime: 45000, maxTime: 75000, timeMultiplier: 1.0, badEventChance: 0.12, goodEventChance: 0.12, label: 'Marine', rewindRechargeTime: 30000 },
+    hard: { startTime: 30000, maxTime: 60000, timeMultiplier: 0.5, badEventChance: 0.18, goodEventChance: 0.08, label: 'Nightmare', rewindRechargeTime: 45000 }
 };
 
 const TIME_BONUSES = { 4: 200, 8: 350, 16: 500, 32: 750, 64: 1000, 128: 1500, 256: 2000, 512: 3000, 1024: 4500, 2048: 6000 };
-const CELL_SIZE = 100;
-const CELL_GAP = 12;
+
+// Cell size based on screen width - cached for performance
+let CELL_SIZE = 100;
+let CELL_GAP = 12;
+
+function updateCellDimensions() {
+    // Try to read actual dimensions from DOM
+    const cell = document.querySelector('.grid-cell');
+    const grid = document.querySelector('.grid');
+
+    if (cell && grid) {
+        CELL_SIZE = cell.offsetWidth;
+        const style = window.getComputedStyle(grid);
+        CELL_GAP = parseInt(style.gap) || parseInt(style.rowGap) || 12;
+    } else {
+        // Fallback based on screen width
+        const width = window.innerWidth;
+        if (width <= 380) {
+            CELL_SIZE = 60;
+            CELL_GAP = 6;
+        } else if (width <= 520) {
+            CELL_SIZE = 70;
+            CELL_GAP = 8;
+        } else {
+            CELL_SIZE = 100;
+            CELL_GAP = 12;
+        }
+    }
+}
+
+// Update on load and resize
+updateCellDimensions();
+window.addEventListener('resize', () => {
+    updateCellDimensions();
+    if (game.isPlaying) {
+        renderTiles(); // Re-render tiles with new dimensions
+    }
+});
 
 // Silly score comments - Doom style!
 const SCORE_COMMENTS = {
@@ -30,18 +318,18 @@ const MERGE_QUIPS = [
 
 const EVENTS = {
     good: [
-        { type: 'bonus_time', name: '⏰ SOUL SPHERE!', desc: '+5 seconds, mortal!', effect: (g) => { g.addTime(5000); showScreenEffect('time-bonus-effect'); } },
-        { type: 'clear_bombs', name: '🧯 BFG DEPLOYED!', desc: 'All demons defused!', effect: (g) => { g.clearBombs(); showScreenEffect('time-bonus-effect'); } },
-        { type: 'unfreeze', name: '🔥 RIP AND THAW!', desc: 'Tiles are angry again!', effect: (g) => { g.unfreezeAll(); showScreenEffect('time-bonus-effect'); } },
-        { type: 'bonus_tile', name: '⭐ POWER-UP!', desc: 'A blessed tile descends!', effect: (g) => { g.addBonusTile(); } },
-        { type: 'score_boost', name: '💰 SECRET FOUND!', desc: '+500 points! Very sneaky!', effect: (g) => { g.score += 500; g.updateScore(); showScorePopup(500); showScreenEffect('time-bonus-effect'); } }
+        { type: 'bonus_time', name: '<i class="fa-solid fa-clock"></i> SOUL SPHERE!', desc: '+5 seconds, mortal!', effect: (g) => { g.addTime(5000); showScreenEffect('time-bonus-effect'); } },
+        { type: 'clear_bombs', name: '<i class="fa-solid fa-fire-extinguisher"></i> BFG DEPLOYED!', desc: 'All demons defused!', effect: (g) => { g.clearBombs(); showScreenEffect('time-bonus-effect'); } },
+        { type: 'unfreeze', name: '<i class="fa-solid fa-fire"></i> RIP AND THAW!', desc: 'Tiles are angry again!', effect: (g) => { g.unfreezeAll(); showScreenEffect('time-bonus-effect'); } },
+        { type: 'bonus_tile', name: '<i class="fa-solid fa-star"></i> POWER-UP!', desc: 'A blessed tile descends!', effect: (g) => { g.addBonusTile(); } },
+        { type: 'score_boost', name: '<i class="fa-solid fa-coins"></i> SECRET FOUND!', desc: '+500 points! Very sneaky!', effect: (g) => { g.score += 500; g.updateScore(); showScorePopup(500); showScreenEffect('time-bonus-effect'); } }
     ],
     bad: [
-        { type: 'time_drain', name: '⏳ TIME VAMPIRE!', desc: '-3 seconds sucked away!', effect: (g) => { g.addTime(-3000); showScreenEffect('time-drain-effect'); } },
-        { type: 'bomb', name: '💣 DEMON BOMB!', desc: 'Something evil appeared...', effect: (g) => { g.addBombTile(); } },
-        { type: 'freeze', name: '❄️ ICE DEMON!', desc: 'A tile has been cursed!', effect: (g) => { g.freezeRandomTile(); showScreenEffect('freeze-effect'); } },
-        { type: 'shuffle', name: '🔀 CHAOS MAGIC!', desc: 'Reality is scrambled!', effect: (g) => { g.shuffleTiles(); showScreenEffect('shuffle-effect'); } },
-        { type: 'spawn_low', name: '↩️ DEMONIC RESET!', desc: 'A tile got possessed!', effect: (g) => { g.resetRandomTile(); showScreenEffect('time-drain-effect'); } }
+        { type: 'time_drain', name: '<i class="fa-solid fa-hourglass-half"></i> TIME VAMPIRE!', desc: '-3 seconds sucked away!', effect: (g) => { g.addTime(-3000); showScreenEffect('time-drain-effect'); } },
+        { type: 'bomb', name: '<i class="fa-solid fa-bomb"></i> DEMON BOMB!', desc: 'Something evil appeared...', effect: (g) => { g.addBombTile(); } },
+        { type: 'freeze', name: '<i class="fa-solid fa-snowflake"></i> ICE DEMON!', desc: 'A tile has been cursed!', effect: (g) => { g.freezeRandomTile(); showScreenEffect('freeze-effect'); } },
+        { type: 'shuffle', name: '<i class="fa-solid fa-shuffle"></i> CHAOS MAGIC!', desc: 'Reality is scrambled!', effect: (g) => { g.shuffleTiles(); showScreenEffect('shuffle-effect'); } },
+        { type: 'spawn_low', name: '<i class="fa-solid fa-rotate-left"></i> DEMONIC RESET!', desc: 'A tile got possessed!', effect: (g) => { g.resetRandomTile(); showScreenEffect('time-drain-effect'); } }
     ]
 };
 
@@ -78,11 +366,12 @@ class Tile {
     }
 
     getPosition() {
-        return { x: this.col * (CELL_SIZE + CELL_GAP), y: this.row * (CELL_SIZE + CELL_GAP) };
+        // Offset to center tiles in cells (accounting for borders)
+        return { x: this.col * (CELL_SIZE + CELL_GAP) + 4, y: this.row * (CELL_SIZE + CELL_GAP) + 4 };
     }
 
     getPrevPosition() {
-        return { x: this.prevCol * (CELL_SIZE + CELL_GAP), y: this.prevRow * (CELL_SIZE + CELL_GAP) };
+        return { x: this.prevCol * (CELL_SIZE + CELL_GAP) + 4, y: this.prevRow * (CELL_SIZE + CELL_GAP) + 4 };
     }
 
     updatePosition(row, col) {
@@ -112,13 +401,33 @@ class Tile {
 // ===== Game State =====
 const MOVE_COOLDOWN = 150; // Minimum ms between moves
 const BAD_MOVE_PENALTY = 500; // Time penalty (ms) for moves that don't result in tile movement
+const BAD_MOVE_FREEZE_THRESHOLD = 3; // Number of consecutive bad moves before freeze
+const FREEZE_DURATION = 3000; // Duration of control freeze in ms
 
 let game = {
     tiles: [], score: 0, timeRemaining: 45000, maxTime: 75000, difficulty: 'normal',
     isPlaying: false, lastUpdate: 0, timerInterval: null, moveCount: 0, isAnimating: false,
     frozenPositions: new Set(), bombPositions: new Set(), bonusPositions: new Set(),
     bombTimers: new Map(), // Track countdown for each bomb position
-    lastMoveTime: 0 // Track last move timestamp for rate limiting
+    lastMoveTime: 0, // Track last move timestamp for rate limiting
+    consecutiveBadMoves: 0, // Track consecutive bad moves for freeze mechanic
+    isControlsFrozen: false, // Whether controls are currently frozen
+    // Time Rewind mechanic
+    history: [], // Stack of past game states
+    rewindCharges: 3, // Number of rewinds available
+    isRewinding: false, // Whether currently in rewind animation
+    rewindRechargeProgress: 0, // Progress toward next charge (0-1)
+    // Day/Night cycle
+    gameTime: 0, // Total time played in ms
+    currentPhase: 'dawn' // Current time phase: dawn, day, dusk, night
+};
+
+// Day/Night cycle phases (30 seconds each = 120s full cycle)
+const TIME_PHASES = {
+    dawn: { duration: 30000, next: 'day', name: 'DAWN', icon: 'fa-sun', bonus: 1.2 },
+    day: { duration: 30000, next: 'dusk', name: 'DAY', icon: 'fa-sun', bonus: 1.0 },
+    dusk: { duration: 30000, next: 'night', name: 'DUSK', icon: 'fa-cloud-sun', bonus: 1.0 },
+    night: { duration: 30000, next: 'dawn', name: 'NIGHT', icon: 'fa-moon', bonus: 0.8 }
 };
 
 // ===== DOM Elements =====
@@ -136,6 +445,8 @@ function init() {
     initElements();
     loadHighScores();
     loadTheme();
+    loadSoundSetting();
+    loadMusicSetting();
     setupEventListeners();
 }
 
@@ -157,7 +468,77 @@ function toggleTheme() {
 function updateThemeIcon(theme) {
     const icon = document.querySelector('.theme-icon');
     if (icon) {
-        icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+        icon.innerHTML = theme === 'dark' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    }
+}
+
+// ===== Sound Toggle =====
+function toggleSound() {
+    SoundManager.enabled = !SoundManager.enabled;
+    localStorage.setItem('timeRush2048Sound', SoundManager.enabled ? 'on' : 'off');
+    updateSoundIcon();
+    if (SoundManager.enabled) {
+        SoundManager.click();
+    }
+}
+
+function loadSoundSetting() {
+    const saved = localStorage.getItem('timeRush2048Sound');
+    SoundManager.enabled = saved !== 'off';
+    updateSoundIcon();
+}
+
+function updateSoundIcon() {
+    const btn = document.getElementById('soundToggle');
+    const icon = document.querySelector('.sound-icon');
+    if (btn && icon) {
+        if (SoundManager.enabled) {
+            btn.classList.remove('muted');
+            icon.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        } else {
+            btn.classList.add('muted');
+            icon.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+        }
+    }
+}
+
+// ===== Music Toggle =====
+function toggleMusic() {
+    MusicManager.toggle();
+    // If music is now UNMUTED (isPlaying=true), we want to start it if game is active
+    if (!MusicManager.isMuted && game.isPlaying) {
+        MusicManager.start();
+    }
+
+    // Play interaction sound
+    if (SoundManager.enabled) {
+        SoundManager.click();
+    }
+
+    localStorage.setItem('timeRush2048Music', MusicManager.isMuted ? 'off' : 'on');
+    updateMusicIcon();
+}
+
+function loadMusicSetting() {
+    const saved = localStorage.getItem('timeRush2048Music');
+    // Default is on. If saved is 'off', then isMuted = true.
+    MusicManager.isMuted = saved === 'off';
+    updateMusicIcon();
+}
+
+function updateMusicIcon() {
+    const btn = document.getElementById('musicToggle');
+    const icon = document.querySelector('.music-icon');
+    if (btn && icon) {
+        if (!MusicManager.isMuted) {
+            btn.classList.remove('muted');
+            icon.innerHTML = '<i class="fa-solid fa-music"></i>';
+            btn.title = 'Music On';
+        } else {
+            btn.classList.add('muted');
+            icon.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+            btn.title = 'Music Off';
+        }
     }
 }
 
@@ -251,6 +632,14 @@ const keysHeld = new Set();
 
 function handleKeyDown(e) {
     if (!game.isPlaying || game.isAnimating) return;
+
+    // Rewind with R key
+    if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        rewind();
+        return;
+    }
+
     const keyMap = { 'ArrowUp': 'up', 'ArrowDown': 'down', 'ArrowLeft': 'left', 'ArrowRight': 'right', 'w': 'up', 's': 'down', 'a': 'left', 'd': 'right' };
 
     if (keyMap[e.key]) {
@@ -283,6 +672,15 @@ function startGame(difficulty) {
     game.bonusPositions = new Set();
     game.bombTimers = new Map();
     game.lastMoveTime = 0;
+    game.consecutiveBadMoves = 0;
+    game.isControlsFrozen = false;
+    game.history = [];
+    game.rewindCharges = 3;
+    game.isRewinding = false;
+    game.rewindRechargeProgress = 0;
+    game.gameTime = 0;
+    game.currentPhase = 'dawn';
+    document.body.setAttribute('data-time-phase', 'dawn');
 
     elements.difficultyBadge.textContent = config.label;
     elements.difficultyBadge.className = `difficulty-badge ${difficulty}`;
@@ -294,20 +692,29 @@ function startGame(difficulty) {
     elements.gameOver.classList.remove('show');
     elements.tileContainer.innerHTML = '';
 
+    // Update cell dimensions now that grid is visible
+    updateCellDimensions();
+
     addRandomTile();
     addRandomTile();
     renderTiles();
 
+    // Save initial state for rewind
+    saveGameState();
+    updateRewindUI();
+
     game.lastUpdate = performance.now();
     startTimer();
+    MusicManager.start(); // Start background music
 }
 
 function restartGame() { stopTimer(); elements.gameOver.classList.remove('show'); startGame(game.difficulty); }
-function backToMenu() { stopTimer(); game.isPlaying = false; elements.gameOver.classList.remove('show'); elements.gameContainer.classList.remove('active'); elements.menuScreen.classList.remove('hidden'); loadHighScores(); }
+function backToMenu() { stopTimer(); MusicManager.stop(); game.isPlaying = false; elements.gameOver.classList.remove('show'); elements.gameContainer.classList.remove('active'); elements.menuScreen.classList.remove('hidden'); loadHighScores(); }
 
 function gameOver() {
     game.isPlaying = false;
     stopTimer();
+    SoundManager.gameOver();
     elements.finalScore.textContent = game.score;
 
     // Show silly score comment
@@ -319,16 +726,141 @@ function gameOver() {
     elements.gameOver.classList.add('show');
 }
 
+// ===== Time Rewind System =====
+function saveGameState() {
+    const state = {
+        tiles: game.tiles.map(t => ({ row: t.row, col: t.col, value: t.value })),
+        score: game.score,
+        timeRemaining: game.timeRemaining,
+        frozenPositions: [...game.frozenPositions],
+        bombPositions: [...game.bombPositions],
+        bombTimers: [...game.bombTimers.entries()]
+    };
+    game.history.push(state);
+    // Keep only last 5 states
+    if (game.history.length > 5) game.history.shift();
+}
+
+function restoreGameState(state) {
+    // Recreate tiles from state
+    game.tiles = state.tiles.map(t => new Tile(t.row, t.col, t.value));
+    game.score = state.score;
+    game.timeRemaining = state.timeRemaining;
+    game.frozenPositions = new Set(state.frozenPositions);
+    game.bombPositions = new Set(state.bombPositions);
+    game.bombTimers = new Map(state.bombTimers);
+    updateScore();
+    updateTimerDisplay();
+    renderTiles();
+}
+
+function rewind() {
+    if (!game.isPlaying || game.isRewinding || game.isAnimating) return;
+    if (game.rewindCharges <= 0) {
+        showEventToast('<i class="fa-solid fa-ban"></i> NO REWINDS LEFT!', 'Keep playing!', 'bad');
+        return;
+    }
+    if (game.history.length < 2) {
+        showEventToast('<i class="fa-solid fa-ban"></i> NOTHING TO REWIND!', 'Make some moves first!', 'bad');
+        return;
+    }
+
+    game.isRewinding = true;
+    game.rewindCharges--;
+
+    // Play rewind sound
+    SoundManager.rewind();
+
+    // Show VHS rewind effect
+    showRewindEffect();
+
+    // Pop current state and restore previous
+    game.history.pop(); // Remove current
+    const previousState = game.history[game.history.length - 1];
+
+    setTimeout(() => {
+        restoreGameState(previousState);
+        game.isRewinding = false;
+        updateRewindUI();
+        showEventToast('<i class="fa-solid fa-backward"></i> TIME REVERSED!', 'Charge used: ' + game.rewindCharges + ' left', 'good');
+    }, 500);
+}
+
+function showRewindEffect() {
+    const effect = document.createElement('div');
+    effect.className = 'rewind-effect';
+    effect.innerHTML = '<div class="rewind-lines"></div><div class="rewind-text"><i class="fa-solid fa-backward"></i> REWINDING...</div>';
+    elements.gridContainer.appendChild(effect);
+    setTimeout(() => effect.remove(), 600);
+}
+
+function updateRewindUI() {
+    const rewindBtn = document.getElementById('rewindBtn');
+    const rewindCount = document.getElementById('rewindCount');
+    if (rewindCount) {
+        rewindCount.textContent = game.rewindCharges;
+    }
+    if (rewindBtn) {
+        rewindBtn.disabled = game.rewindCharges <= 0;
+    }
+}
+
+function earnRewindCharge() {
+    game.rewindCharges++;
+    updateRewindUI();
+    showEventToast('<i class="fa-solid fa-backward"></i> REWIND EARNED!', 'You now have ' + game.rewindCharges + ' charges!', 'good');
+}
+
 // ===== Timer =====
 function startTimer() { game.timerInterval = setInterval(updateTimer, 16); }
 function stopTimer() { if (game.timerInterval) { clearInterval(game.timerInterval); game.timerInterval = null; } }
 
 function updateTimer() {
     const now = performance.now();
-    game.timeRemaining -= now - game.lastUpdate;
+    const delta = now - game.lastUpdate;
+    game.timeRemaining -= delta;
+    game.gameTime += delta; // Track total game time for day/night cycle
     game.lastUpdate = now;
+
     if (game.timeRemaining <= 0) { game.timeRemaining = 0; gameOver(); return; }
+
     updateTimerDisplay();
+    updateTimePhase();
+    updateRewindRecharge(delta);
+}
+
+// Passive rewind recharge over time
+function updateRewindRecharge(delta) {
+    // Don't recharge if already at max (3)
+    if (game.rewindCharges >= 3) {
+        game.rewindRechargeProgress = 0;
+        updateRechargeProgressUI();
+        return;
+    }
+
+    const config = DIFFICULTIES[game.difficulty];
+    const rechargeRate = delta / config.rewindRechargeTime; // Progress per frame
+
+    game.rewindRechargeProgress += rechargeRate;
+
+    // Award a new charge when progress reaches 1
+    if (game.rewindRechargeProgress >= 1) {
+        game.rewindRechargeProgress = 0;
+        game.rewindCharges++;
+        SoundManager.timeBonus(); // Play a nice sound
+        showEventToast('<i class="fa-solid fa-backward"></i> REWIND RECHARGED!', '+1 charge!', 'good');
+        updateRewindUI();
+    }
+
+    // Update the recharge progress bar
+    updateRechargeProgressUI();
+}
+
+function updateRechargeProgressUI() {
+    const progressBar = document.getElementById('rewindProgress');
+    if (progressBar) {
+        progressBar.style.width = (game.rewindRechargeProgress * 100) + '%';
+    }
 }
 
 function updateTimerDisplay() {
@@ -343,8 +875,72 @@ function updateTimerDisplay() {
     else if (percentage < 40) elements.timerBar.classList.add('warning');
 }
 
+// Day/Night cycle update
+function updateTimePhase() {
+    const cycleTime = game.gameTime % 120000; // 120s full cycle
+    let newPhase;
+
+    if (cycleTime < 30000) newPhase = 'dawn';
+    else if (cycleTime < 60000) newPhase = 'day';
+    else if (cycleTime < 90000) newPhase = 'dusk';
+    else newPhase = 'night';
+
+    if (newPhase !== game.currentPhase) {
+        game.currentPhase = newPhase;
+        applyTimePhase(newPhase);
+    }
+
+    // Update phase indicator
+    updatePhaseIndicator();
+}
+
+function applyTimePhase(phase) {
+    document.body.setAttribute('data-time-phase', phase);
+    const phaseInfo = TIME_PHASES[phase];
+    showEventToast(`<i class="fa-solid ${phaseInfo.icon}"></i> ${phaseInfo.name}`, getPhaseDescription(phase), 'good');
+}
+
+function getPhaseDescription(phase) {
+    switch (phase) {
+        case 'dawn': return 'Time bonuses +20%!';
+        case 'day': return 'Standard gameplay';
+        case 'dusk': return 'Twilight approaches...';
+        case 'night': return 'Time bonuses -20%!';
+    }
+}
+
+function updatePhaseIndicator() {
+    const indicator = document.getElementById('phaseIndicator');
+    const phaseIcon = document.getElementById('phaseIcon');
+    const phaseTime = document.getElementById('phaseTime');
+
+    if (!indicator) return;
+
+    const phaseInfo = TIME_PHASES[game.currentPhase];
+    const cycleTime = game.gameTime % 120000;
+    let phaseProgress;
+
+    // Calculate time remaining in current phase
+    if (game.currentPhase === 'dawn') phaseProgress = cycleTime;
+    else if (game.currentPhase === 'day') phaseProgress = cycleTime - 30000;
+    else if (game.currentPhase === 'dusk') phaseProgress = cycleTime - 60000;
+    else phaseProgress = cycleTime - 90000;
+
+    const timeLeft = Math.ceil((30000 - phaseProgress) / 1000);
+
+    if (phaseIcon) phaseIcon.className = `fa-solid ${phaseInfo.icon}`;
+    if (phaseTime) phaseTime.textContent = timeLeft + 's';
+}
+
+function getTimePhaseBonus() {
+    return TIME_PHASES[game.currentPhase]?.bonus || 1.0;
+}
+
 function addTime(ms) {
-    game.timeRemaining = Math.min(game.maxTime, Math.max(0, game.timeRemaining + ms));
+    // Apply time phase bonus
+    const bonus = getTimePhaseBonus();
+    const adjustedMs = ms > 0 ? Math.round(ms * bonus) : ms;
+    game.timeRemaining = Math.min(game.maxTime, Math.max(0, game.timeRemaining + adjustedMs));
     updateTimerDisplay();
 }
 
@@ -373,7 +969,7 @@ function addRandomTile() {
 
 // ===== Movement with Animation =====
 function move(direction) {
-    if (!game.isPlaying || game.isAnimating) return;
+    if (!game.isPlaying || game.isAnimating || game.isControlsFrozen) return;
 
     // Rate limiting - enforce minimum time between moves
     const now = performance.now();
@@ -459,8 +1055,10 @@ function move(direction) {
     if (moved) {
         game.isAnimating = true;
         game.moveCount++;
+        game.consecutiveBadMoves = 0; // Reset bad move counter on successful move
         game.score += mergeScore;
         updateScore();
+        SoundManager.slide();
 
         // Animate tiles
         animateTiles(() => {
@@ -471,6 +1069,18 @@ function move(direction) {
                 const pos = mergedPositions[i];
                 showTimeBonusAt(bonus, pos.r, pos.c);
                 spawnParticles(pos.r, pos.c, 'star', 8);
+
+                // Play merge sound based on value
+                if (val >= 128) {
+                    SoundManager.bigMerge(val);
+                } else {
+                    SoundManager.merge(val);
+                }
+
+                // Check for 2048 victory!
+                if (val === 2048) {
+                    SoundManager.victory();
+                }
 
                 // Show silly quip for big merges!
                 if (val >= 64) {
@@ -488,6 +1098,17 @@ function move(direction) {
             // Trigger random events
             triggerRandomEvent();
 
+            // Save game state for rewind
+            saveGameState();
+            updateRewindUI();
+
+            // Award rewind charge for reaching milestones
+            mergedValues.forEach(val => {
+                if (val === 512 || val === 1024 || val === 2048) {
+                    earnRewindCharge();
+                }
+            });
+
             game.isAnimating = false;
 
             // Check game over
@@ -495,8 +1116,14 @@ function move(direction) {
         });
     } else {
         // Bad move - no tiles moved, apply time penalty
+        game.consecutiveBadMoves++;
         addTime(-BAD_MOVE_PENALTY);
         showBadMoveFeedback();
+
+        // Check if we should freeze controls
+        if (game.consecutiveBadMoves >= BAD_MOVE_FREEZE_THRESHOLD) {
+            freezeControls();
+        }
     }
 }
 
@@ -651,8 +1278,80 @@ function showBadMoveFeedback() {
     // Shake the board
     shakeBoard();
 
+    // Play penalty sound
+    SoundManager.timePenalty();
+
     // Brief red flash
     showScreenEffect('bad-move-effect');
+}
+
+function freezeControls() {
+    if (game.isControlsFrozen) return; // Already frozen
+
+    game.isControlsFrozen = true;
+    game.consecutiveBadMoves = 0; // Reset counter
+    SoundManager.freeze();
+
+    // Create freeze overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'freeze-overlay';
+    overlay.id = 'freezeOverlay';
+
+    const freezeContent = document.createElement('div');
+    freezeContent.className = 'freeze-content';
+
+    const icon = document.createElement('i');
+    icon.className = 'fa-solid fa-snowflake freeze-icon';
+
+    const text = document.createElement('div');
+    text.className = 'freeze-text';
+    text.textContent = 'CONTROLS FROZEN!';
+
+    const subtext = document.createElement('div');
+    subtext.className = 'freeze-subtext';
+    subtext.textContent = 'Too many bad moves!';
+
+    const countdown = document.createElement('div');
+    countdown.className = 'freeze-countdown';
+    countdown.id = 'freezeCountdown';
+    countdown.textContent = '3';
+
+    freezeContent.appendChild(icon);
+    freezeContent.appendChild(text);
+    freezeContent.appendChild(subtext);
+    freezeContent.appendChild(countdown);
+    overlay.appendChild(freezeContent);
+    elements.gridContainer.appendChild(overlay);
+
+    // Show event toast
+    showEventToast('<i class="fa-solid fa-snowflake"></i> BRAIN FREEZE!', 'Controls locked for 3 seconds!', 'bad');
+
+    // Countdown animation
+    let remaining = 3;
+    const countdownEl = document.getElementById('freezeCountdown');
+
+    const countdownInterval = setInterval(() => {
+        remaining--;
+        if (countdownEl) {
+            countdownEl.textContent = remaining > 0 ? remaining : '';
+            countdownEl.classList.add('pulse');
+            setTimeout(() => countdownEl.classList.remove('pulse'), 200);
+        }
+
+        if (remaining <= 0) {
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
+
+    // Unfreeze after duration
+    setTimeout(() => {
+        game.isControlsFrozen = false;
+        const overlayEl = document.getElementById('freezeOverlay');
+        if (overlayEl) {
+            overlayEl.classList.add('fade-out');
+            setTimeout(() => overlayEl.remove(), 300);
+        }
+    }, FREEZE_DURATION);
 }
 
 function spawnParticles(row, col, type, count) {
@@ -699,6 +1398,14 @@ function triggerRandomEvent() {
 function showEventToast(title, desc, type) {
     elements.eventToast.innerHTML = `<strong>${title}</strong> ${desc}`;
     elements.eventToast.className = `event-toast ${type} show`;
+
+    // Play sound based on event type
+    if (type === 'good') {
+        SoundManager.goodEvent();
+    } else if (type === 'bad') {
+        SoundManager.badEvent();
+    }
+
     setTimeout(() => elements.eventToast.classList.remove('show'), 2500);
 }
 
@@ -833,6 +1540,31 @@ function checkBombs() {
         triggerBombExplosion(r, c);
     });
 }
+
+// ===== Help Modal =====
+function toggleHelpModal() {
+    const overlay = document.getElementById('helpModalOverlay');
+    if (overlay) {
+        overlay.classList.toggle('show');
+    }
+}
+
+function closeHelpModalIfOverlay(event) {
+    // Only close if clicking directly on the overlay, not the modal content
+    if (event.target.id === 'helpModalOverlay') {
+        toggleHelpModal();
+    }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('helpModalOverlay');
+        if (overlay && overlay.classList.contains('show')) {
+            toggleHelpModal();
+        }
+    }
+});
 
 // ===== Start =====
 init();

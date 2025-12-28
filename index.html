@@ -3,19 +3,39 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="TILE SLAYER 2048 - RIP AND MERGE!">
     <title>TILE SLAYER 2048</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 </head>
 
 <body>
     <!-- Theme Toggle -->
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
-        <span class="theme-icon">🌙</span>
+        <span class="theme-icon"><i class="fa-solid fa-moon"></i></span>
+    </button>
+
+    <!-- Sound Toggle -->
+    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()" title="Toggle Sound">
+        <span class="sound-icon"><i class="fa-solid fa-volume-high"></i></span>
+    </button>
+
+    <!-- Music Toggle -->
+    <button class="music-toggle" id="musicToggle" onclick="toggleMusic()" title="Toggle Music">
+        <span class="music-icon"><i class="fa-solid fa-music-slash"></i></span>
+    </button>
+
+    <!-- Help Button -->
+    <button class="help-toggle" id="helpToggle" onclick="toggleHelpModal()" title="How to Play">
+        <i class="fa-solid fa-question"></i>
     </button>
 
     <!-- Menu Screen -->
@@ -24,20 +44,20 @@
         <p class="menu-subtitle">RIP AND MERGE UNTIL IT IS DONE</p>
         <div class="difficulty-selector">
             <button class="difficulty-btn easy" onclick="startGame('easy')">
-                👶 Baby Mode
+                <i class="fa-solid fa-baby"></i> Baby Mode
                 <span class="difficulty-desc">For those who fear the tiles</span>
             </button>
             <button class="difficulty-btn normal" onclick="startGame('normal')">
-                💀 Marine
+                <i class="fa-solid fa-skull"></i> Marine
                 <span class="difficulty-desc">Standard slaying experience</span>
             </button>
             <button class="difficulty-btn hard" onclick="startGame('hard')">
-                🔥 Nightmare
+                <i class="fa-solid fa-fire-flame-curved"></i> Nightmare
                 <span class="difficulty-desc">Only legends survive here</span>
             </button>
         </div>
         <div class="high-scores" id="highScores">
-            <h3>💀 HALL OF SLAYERS</h3>
+            <h3><i class="fa-solid fa-skull"></i> HALL OF SLAYERS</h3>
             <div class="high-score-item"><span>Baby:</span><span id="highScoreEasy">0</span></div>
             <div class="high-score-item"><span>Marine:</span><span id="highScoreNormal">0</span></div>
             <div class="high-score-item"><span>Nightmare:</span><span id="highScoreHard">0</span></div>
@@ -58,6 +78,10 @@
                     <div class="stat-value" id="best">0</div>
                 </div>
                 <span class="difficulty-badge" id="difficultyBadge">Normal</span>
+                <div class="phase-indicator" id="phaseIndicator" title="Day/Night Cycle">
+                    <i class="fa-solid fa-sun" id="phaseIcon"></i>
+                    <span id="phaseTime">30s</span>
+                </div>
             </div>
         </div>
         <div class="timer-container">
@@ -91,10 +115,17 @@
             <div class="tile-container" id="tileContainer"></div>
         </div>
         <div class="controls">
-            <button class="btn btn-secondary" onclick="restartGame()">💀 RESPAWN</button>
-            <button class="btn btn-secondary" onclick="backToMenu()">🚪 RETREAT</button>
+            <button class="btn btn-rewind" id="rewindBtn" onclick="rewind()" title="Press R to Rewind">
+                <div class="rewind-progress-bar">
+                    <div class="rewind-progress" id="rewindProgress"></div>
+                </div>
+                <i class="fa-solid fa-backward"></i> REWIND <span class="rewind-count" id="rewindCount">3</span>
+            </button>
+            <button class="btn btn-secondary" onclick="restartGame()"><i class="fa-solid fa-skull"></i> RESPAWN</button>
+            <button class="btn btn-secondary" onclick="backToMenu()"><i class="fa-solid fa-door-open"></i>
+                RETREAT</button>
         </div>
-        <p class="instructions">WASD or Arrows to slay • Swipe on mobile</p>
+        <p class="instructions">WASD/Arrows to slay • R to rewind • Swipe on mobile</p>
     </div>
 
     <div class="event-toast" id="eventToast"></div>
@@ -105,11 +136,110 @@
         <div class="game-over-stats">
             <div class="final-score-label">Final Kill Count</div>
             <div class="final-score" id="finalScore">0</div>
-            <div class="new-high-score" id="newHighScore" style="display: none;">🏆 NEW SLAYER RECORD!</div>
+            <div class="new-high-score" id="newHighScore" style="display: none;"><i class="fa-solid fa-trophy"></i> NEW
+                SLAYER RECORD!</div>
         </div>
         <div class="game-over-buttons">
-            <button class="btn btn-primary" onclick="restartGame()">💀 SLAY AGAIN</button>
-            <button class="btn btn-secondary" onclick="backToMenu()">🚪 FLEE</button>
+            <button class="btn btn-primary" onclick="restartGame()"><i class="fa-solid fa-skull"></i> SLAY
+                AGAIN</button>
+            <button class="btn btn-secondary" onclick="backToMenu()"><i class="fa-solid fa-door-open"></i> FLEE</button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="help-modal-overlay" id="helpModalOverlay" onclick="closeHelpModalIfOverlay(event)">
+        <div class="help-modal">
+            <button class="help-modal-close" onclick="toggleHelpModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h2 class="help-modal-title"><i class="fa-solid fa-circle-question"></i> HOW TO PLAY</h2>
+            <div class="help-modal-content">
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-gamepad"></i> CONTROLS</h3>
+                    <p>Move tiles around the board to merge matching numbers.</p>
+                    <ul>
+                        <li><i class="fa-solid fa-keyboard"></i> Use <strong>WASD</strong> or <strong>Arrow
+                                Keys</strong> to move tiles</li>
+                        <li><i class="fa-solid fa-hand-pointer"></i> On mobile, <strong>swipe</strong> in any direction
+                        </li>
+                        <li><i class="fa-solid fa-mouse"></i> You can also <strong>click and drag</strong> on the grid
+                        </li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-calculator"></i> MERGING</h3>
+                    <p>When two tiles with the same number collide, they merge into one tile with double the value.</p>
+                    <p><strong>Example:</strong> 2 + 2 = 4, then 4 + 4 = 8, and so on!</p>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-clock"></i> TIME MECHANIC</h3>
+                    <p>You're racing against the clock! Each successful merge adds time to your timer.</p>
+                    <p class="help-warning"><i class="fa-solid fa-triangle-exclamation"></i> Moves that don't result in
+                        any tile movement will cost you time! Make 3 bad moves in a row and your controls will be frozen
+                        for 3 seconds!</p>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-wand-magic-sparkles"></i> RANDOM EVENTS</h3>
+                    <p>Random events can occur during gameplay:</p>
+                    <ul class="event-list">
+                        <li>
+                            <i class="fa-solid fa-clock text-good"></i>
+                            <strong>Soul Sphere</strong>
+                            <span class="event-dash">—</span>
+                            <span class="event-desc">Grants bonus time</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-bomb text-bad"></i>
+                            <strong>Demon Bomb</strong>
+                            <span class="event-dash">—</span>
+                            <span class="event-desc">Spawns a tile that will explode</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-snowflake text-bad"></i>
+                            <strong>Ice Demon</strong>
+                            <span class="event-dash">—</span>
+                            <span class="event-desc">Freezes a tile in place</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-shuffle text-bad"></i>
+                            <strong>Chaos Magic</strong>
+                            <span class="event-dash">—</span>
+                            <span class="event-desc">Shuffles all tile positions</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-star text-good"></i>
+                            <strong>Power-Up</strong>
+                            <span class="event-dash">—</span>
+                            <span class="event-desc">Spawns a bonus tile</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-backward"></i> TIME REWIND</h3>
+                    <p>Press <strong>R</strong> or click the REWIND button to undo your last move!</p>
+                    <p>You start with 3 rewind charges. Earn more by reaching 512, 1024, or 2048 tiles.</p>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-sun"></i> DAY/NIGHT CYCLE</h3>
+                    <p>Time phases change every 30 seconds:</p>
+                    <ul class="event-list">
+                        <li><i class="fa-solid fa-sun text-good"></i><strong>Dawn</strong><span
+                                class="event-dash">—</span><span class="event-desc">+20% time bonuses</span></li>
+                        <li><i class="fa-solid fa-sun"></i><strong>Day</strong><span class="event-dash">—</span><span
+                                class="event-desc">Normal gameplay</span></li>
+                        <li><i class="fa-solid fa-cloud-sun"></i><strong>Dusk</strong><span
+                                class="event-dash">—</span><span class="event-desc">Twilight approaches</span></li>
+                        <li><i class="fa-solid fa-moon text-bad"></i><strong>Night</strong><span
+                                class="event-dash">—</span><span class="event-desc">-20% time bonuses</span></li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h3><i class="fa-solid fa-bullseye"></i> THE GOAL</h3>
+                    <p>Reach the <strong>2048</strong> tile to win! But the game continues beyond that — see how high
+                        you can go and aim for the highest score possible.</p>
+                </div>
+                <div class="help-footer">
+                    <p>Good luck, Slayer! <i class="fa-solid fa-skull"></i></p>
+                </div>
+            </div>
         </div>
     </div>
 
