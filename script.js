@@ -1,30 +1,67 @@
 // ===== Game Configuration =====
 const DIFFICULTIES = {
-    easy: { startTime: 60000, maxTime: 90000, timeMultiplier: 1.5, badEventChance: 0.08, goodEventChance: 0.15, label: 'Easy' },
-    normal: { startTime: 45000, maxTime: 75000, timeMultiplier: 1.0, badEventChance: 0.12, goodEventChance: 0.12, label: 'Normal' },
-    hard: { startTime: 30000, maxTime: 60000, timeMultiplier: 0.5, badEventChance: 0.18, goodEventChance: 0.08, label: 'Hard' }
+    easy: { startTime: 60000, maxTime: 90000, timeMultiplier: 1.5, badEventChance: 0.08, goodEventChance: 0.15, label: 'Baby Mode' },
+    normal: { startTime: 45000, maxTime: 75000, timeMultiplier: 1.0, badEventChance: 0.12, goodEventChance: 0.12, label: 'Marine' },
+    hard: { startTime: 30000, maxTime: 60000, timeMultiplier: 0.5, badEventChance: 0.18, goodEventChance: 0.08, label: 'Nightmare' }
 };
 
 const TIME_BONUSES = { 4: 200, 8: 350, 16: 500, 32: 750, 64: 1000, 128: 1500, 256: 2000, 512: 3000, 1024: 4500, 2048: 6000 };
 const CELL_SIZE = 100;
 const CELL_GAP = 12;
 
+// Silly score comments - Doom style!
+const SCORE_COMMENTS = {
+    pathetic: ["PATHETIC!", "MY GRANDMA SCORES BETTER!", "IS THAT ALL YOU GOT?", "DISAPPOINTING...", "SKILL ISSUE DETECTED"],
+    weak: ["NOT EVEN TRYING!", "WARMING UP?", "MEDIOCRE AT BEST", "YAWN...", "MY DOG COULD DO BETTER"],
+    okay: ["GETTING SOMEWHERE!", "NOT BAD, SOLDIER", "ACCEPTABLE", "KEEP PUSHING!", "SHOW ME MORE!"],
+    good: ["NOW WE'RE TALKING!", "RESPECTABLE!", "THAT'S THE SPIRIT!", "GROOVY!", "NICE MOVES!"],
+    great: ["IMPRESSIVE!", "RIP AND MERGE!", "KNEE DEEP IN TILES!", "BRUTAL!", "DOMINATING!"],
+    amazing: ["UNSTOPPABLE!", "GODLIKE!", "LUDICROUS!", "RAMPAGE!", "M-M-M-MONSTER MERGE!"],
+    legendary: ["ABSOLUTELY MENTAL!", "YOU'RE A BEAST!", "LEGENDARY!", "INCONCEIVABLE!", "HAIL TO THE KING!"],
+    godmode: ["IDDQD ACTIVATED!", "YOU CHEATING?!", "LITERALLY HOW?!", "ASCENDED!", "TOUCHED BY THE TILE GODS!"]
+};
+
+// Silly merge messages
+const MERGE_QUIPS = [
+    "NICE!", "BOOM!", "GET REKT!", "EZ!", "CALCULATED!",
+    "OVERKILL!", "FATALITY!", "COMBO!", "SLICK!", "SMOOTH!",
+    "NOICE!", "BIG BRAIN!", "200 IQ!", "TACTICAL!", "YEET!"
+];
+
 const EVENTS = {
     good: [
-        { type: 'bonus_time', name: '⏰ Time Bonus!', desc: '+5 seconds!', effect: (g) => { g.addTime(5000); showScreenEffect('time-bonus-effect'); } },
-        { type: 'clear_bombs', name: '🧯 Bomb Squad!', desc: 'All bombs defused!', effect: (g) => { g.clearBombs(); showScreenEffect('time-bonus-effect'); } },
-        { type: 'unfreeze', name: '🔥 Thaw Out!', desc: 'All tiles unfrozen!', effect: (g) => { g.unfreezeAll(); showScreenEffect('time-bonus-effect'); } },
-        { type: 'bonus_tile', name: '⭐ Bonus Tile!', desc: 'A star tile appeared!', effect: (g) => { g.addBonusTile(); } },
-        { type: 'score_boost', name: '💰 Score Surge!', desc: '+500 points!', effect: (g) => { g.score += 500; g.updateScore(); showScorePopup(500); showScreenEffect('time-bonus-effect'); } }
+        { type: 'bonus_time', name: '⏰ SOUL SPHERE!', desc: '+5 seconds, mortal!', effect: (g) => { g.addTime(5000); showScreenEffect('time-bonus-effect'); } },
+        { type: 'clear_bombs', name: '🧯 BFG DEPLOYED!', desc: 'All demons defused!', effect: (g) => { g.clearBombs(); showScreenEffect('time-bonus-effect'); } },
+        { type: 'unfreeze', name: '🔥 RIP AND THAW!', desc: 'Tiles are angry again!', effect: (g) => { g.unfreezeAll(); showScreenEffect('time-bonus-effect'); } },
+        { type: 'bonus_tile', name: '⭐ POWER-UP!', desc: 'A blessed tile descends!', effect: (g) => { g.addBonusTile(); } },
+        { type: 'score_boost', name: '💰 SECRET FOUND!', desc: '+500 points! Very sneaky!', effect: (g) => { g.score += 500; g.updateScore(); showScorePopup(500); showScreenEffect('time-bonus-effect'); } }
     ],
     bad: [
-        { type: 'time_drain', name: '⏳ Time Leak!', desc: '-3 seconds!', effect: (g) => { g.addTime(-3000); showScreenEffect('time-drain-effect'); } },
-        { type: 'bomb', name: '💣 Bomb Placed!', desc: 'A bomb appeared!', effect: (g) => { g.addBombTile(); } },
-        { type: 'freeze', name: '❄️ Freeze!', desc: 'A tile was frozen!', effect: (g) => { g.freezeRandomTile(); showScreenEffect('freeze-effect'); } },
-        { type: 'shuffle', name: '🔀 Shuffle!', desc: 'Tiles shuffled!', effect: (g) => { g.shuffleTiles(); showScreenEffect('shuffle-effect'); } },
-        { type: 'spawn_low', name: '↩️ Reset!', desc: 'A tile was reset!', effect: (g) => { g.resetRandomTile(); showScreenEffect('time-drain-effect'); } }
+        { type: 'time_drain', name: '⏳ TIME VAMPIRE!', desc: '-3 seconds sucked away!', effect: (g) => { g.addTime(-3000); showScreenEffect('time-drain-effect'); } },
+        { type: 'bomb', name: '💣 DEMON BOMB!', desc: 'Something evil appeared...', effect: (g) => { g.addBombTile(); } },
+        { type: 'freeze', name: '❄️ ICE DEMON!', desc: 'A tile has been cursed!', effect: (g) => { g.freezeRandomTile(); showScreenEffect('freeze-effect'); } },
+        { type: 'shuffle', name: '🔀 CHAOS MAGIC!', desc: 'Reality is scrambled!', effect: (g) => { g.shuffleTiles(); showScreenEffect('shuffle-effect'); } },
+        { type: 'spawn_low', name: '↩️ DEMONIC RESET!', desc: 'A tile got possessed!', effect: (g) => { g.resetRandomTile(); showScreenEffect('time-drain-effect'); } }
     ]
 };
+
+// Get score comment based on score
+function getScoreComment(score) {
+    if (score < 500) return SCORE_COMMENTS.pathetic[Math.floor(Math.random() * SCORE_COMMENTS.pathetic.length)];
+    if (score < 1500) return SCORE_COMMENTS.weak[Math.floor(Math.random() * SCORE_COMMENTS.weak.length)];
+    if (score < 3000) return SCORE_COMMENTS.okay[Math.floor(Math.random() * SCORE_COMMENTS.okay.length)];
+    if (score < 6000) return SCORE_COMMENTS.good[Math.floor(Math.random() * SCORE_COMMENTS.good.length)];
+    if (score < 12000) return SCORE_COMMENTS.great[Math.floor(Math.random() * SCORE_COMMENTS.great.length)];
+    if (score < 25000) return SCORE_COMMENTS.amazing[Math.floor(Math.random() * SCORE_COMMENTS.amazing.length)];
+    if (score < 50000) return SCORE_COMMENTS.legendary[Math.floor(Math.random() * SCORE_COMMENTS.legendary.length)];
+    return SCORE_COMMENTS.godmode[Math.floor(Math.random() * SCORE_COMMENTS.godmode.length)];
+}
+
+// Get random merge quip
+function getRandomQuip() {
+    return MERGE_QUIPS[Math.floor(Math.random() * MERGE_QUIPS.length)];
+}
+
 
 // ===== Tile Class for Animation =====
 class Tile {
@@ -57,7 +94,9 @@ class Tile {
 
     createElement() {
         const tile = document.createElement('div');
-        const tileClass = this.value > 2048 ? 'super' : this.value;
+        // Extended tile values get their own classes
+        const SUPPORTED_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+        const tileClass = SUPPORTED_VALUES.includes(this.value) ? this.value : 'super';
         tile.className = `tile tile-${tileClass}`;
         tile.textContent = this.value;
 
@@ -96,7 +135,30 @@ function initElements() {
 function init() {
     initElements();
     loadHighScores();
+    loadTheme();
     setupEventListeners();
+}
+
+// ===== Theme Toggle =====
+function loadTheme() {
+    const savedTheme = localStorage.getItem('timeRush2048Theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('timeRush2048Theme', newTheme);
+    updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+    const icon = document.querySelector('.theme-icon');
+    if (icon) {
+        icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+    }
 }
 
 function loadHighScores() {
@@ -247,6 +309,12 @@ function gameOver() {
     game.isPlaying = false;
     stopTimer();
     elements.finalScore.textContent = game.score;
+
+    // Show silly score comment
+    const comment = getScoreComment(game.score);
+    const commentEl = document.getElementById('scoreComment');
+    if (commentEl) commentEl.textContent = comment;
+
     elements.newHighScore.style.display = saveHighScore() ? 'block' : 'none';
     elements.gameOver.classList.add('show');
 }
@@ -403,6 +471,11 @@ function move(direction) {
                 const pos = mergedPositions[i];
                 showTimeBonusAt(bonus, pos.r, pos.c);
                 spawnParticles(pos.r, pos.c, 'star', 8);
+
+                // Show silly quip for big merges!
+                if (val >= 64) {
+                    showQuipAt(getRandomQuip(), pos.r, pos.c);
+                }
             });
 
             // Check bombs
@@ -474,7 +547,8 @@ function animateTiles(callback) {
 
         if (tile.isMerged) {
             tile.element.classList.add('merged');
-            const tileClass = tile.value > 2048 ? 'super' : tile.value;
+            const SUPPORTED_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+            const tileClass = SUPPORTED_VALUES.includes(tile.value) ? tile.value : 'super';
             tile.element.className = `tile tile-${tileClass} merged`;
             tile.element.textContent = tile.value;
         }
@@ -543,6 +617,18 @@ function showScorePopup(points) {
     elements.gridContainer.appendChild(popup);
     setTimeout(() => popup.remove(), 800);
 }
+
+// Show silly quip at tile position
+function showQuipAt(text, row, col) {
+    const quip = document.createElement('div');
+    quip.className = 'quip-popup';
+    quip.textContent = text;
+    quip.style.left = (col * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2) + 'px';
+    quip.style.top = (row * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2 - 30) + 'px';
+    elements.gridContainer.appendChild(quip);
+    setTimeout(() => quip.remove(), 1000);
+}
+
 
 function showScreenEffect(effectClass) {
     const effect = document.createElement('div');
